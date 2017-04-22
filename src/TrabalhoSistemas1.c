@@ -6,26 +6,26 @@
 #include <semaphore.h>
 
 
-#define N 5  /* qtdade de filosofos */
-#define LEFT (i+N-1)%N/* calculo do vizinho a esquerda de i */
-#define RIGHT (i+1)%N   /* calculo do vizinho a direita de i */
+#define N 5  /* qtdade de  sensores */
 #define THINKING 0 /* filosofo pensando */
 #define HUNGRY 1 /* filosofo tentando pegar garfos */
 #define EATING 2 /* filosofo comendo */
 #define TRUE 1
 
-sem_t s[N];                 //um semaforo por filosofo
+sem_t s[N];                 //um semaforo por sensor
 sem_t mutex;                //exclusao mutua para regioes cri­ticas
 
-int   state[N];        
 //array para controlar o estado dos filosofos
+int  sensores[N][2];
+
 pthread_t thread1, thread2, thread3, thread4, thread5;
 //uma thread para cada filósofo
 
 
 // prototipos...
+void geraDadosSensores();
 
-void take_forks(int i);
+void pegaDuplaSensor(int i);
 void put_forks(int i);
 
 void test(int i);
@@ -33,12 +33,11 @@ void think(int i);
 
 void eat(int i);
 
-/* i: numero do filosofo, de 0 a N-1 */
+/* i: numero do sensor, de 0 a N-1 */
 
-void philosopher(int i) {
+void sensor(int i) {
 
 while (TRUE) {  /* repete eternamente */
- think(i);  /* o filosofo esta pensando */
 
  take_forks(i); /* pega dois garfos ou bloqueia */
  eat(i);  /* come espaguete */
@@ -52,7 +51,7 @@ void take_forks(int i) {
 sem_wait(&mutex);//down(&mutex); /* entra na regiao cri­tica */
 
     state[i] = HUNGRY; /* registra que o filosofo i esta com fome */
-printf("philosopher %d HUNGRY\n",i);
+printf("sensor %d HUNGRY\n",i);
 test(i);  /* tenta pegar 2 garfos */
 
 sem_post (&mutex);//up(&mutex);  /* sai da regiao cri­tica */
@@ -64,7 +63,7 @@ void put_forks(i) {
 sem_wait(&mutex); //down(&mutex); /* entra na regiao critica */
 
     state[i] = THINKING;/* o filosofo acabou de comer */
-printf("philosopher %d THINKING\n",i);
+printf("sensor %d THINKING\n",i);
 
 test(LEFT);  /* verifica se o vizinho da esquerda pode comer agora */
 test(RIGHT); /* verifica se o vizinho da direita pode comer agora */
@@ -76,7 +75,7 @@ void test(i) {  //testa se os filosofos vizinhos podem comer
      if (state[i]==HUNGRY && state[LEFT]!=EATING && state[RIGHT]!=EATING){
 
    state[i] = EATING;
-   printf("philosopher %d EATING\n",i);
+   printf("sensor %d EATING\n",i);
    sem_post(&s[i]);//up(&s[i]);
 
      }
@@ -118,19 +117,19 @@ sem_init(&mutex, 0, 1);
 
 // criação de threads independentes que executarao a funcao...
 
-iret1 = pthread_create( &thread1, NULL,(void *) philosopher,
+iret1 = pthread_create( &thread1, NULL,(void *) sensor,
 (int*)p[1]);
 
-iret2 = pthread_create( &thread2, NULL,(void *) philosopher,
+iret2 = pthread_create( &thread2, NULL,(void *) sensor,
 (int*)p[2]);
 
-iret3 = pthread_create( &thread3, NULL,(void *) philosopher,
+iret3 = pthread_create( &thread3, NULL,(void *) sensor,
 (int*)p[3]);
 
-iret4 = pthread_create( &thread4, NULL,(void *) philosopher,
+iret4 = pthread_create( &thread4, NULL,(void *) sensor,
 (int*)p[4]);
 
-iret5 = pthread_create( &thread5, NULL,(void *) philosopher,
+iret5 = pthread_create( &thread5, NULL,(void *) sensor,
 (int*)p[0]);
 
 pthread_join( thread1, NULL);
