@@ -4,11 +4,11 @@
 #include <semaphore.h>
 
 #define N 5  /* qtdade de  sensores */
-#define TRUE 1
 
 sem_t semaforoSensor[N];        //um semaforo por sensor
 sem_t filaCheia;                //exclusao mutua para regioes de acesso a fila cheia
 sem_t filaVazia; 				//exclusão mutua para fila vazia
+sem_t mutex;
 int   state[N];
 
 //array para controlar o estado dos filosofos
@@ -17,7 +17,7 @@ int   state[N];
 //coluna 2=> dupla do sensor
 int  sensores[N][3];
 int numeroAleatorio;
-
+int i;
 //uma thread para cada filósofo
 
 
@@ -35,49 +35,92 @@ void geraDadosSensores(){
 	printf("numero aleatorio %d \n", numeroAleatorio);
 	sensores[b][0]=numeroAleatorio;
  	sensores[b][1]=b;//colocar  o nome do sensor talvez (?)	
-	sensores[b][2]=0;//0 para nao tem dupla, e  outro valor com o i da dupla
+	sensores[b][2]=-1;//-1 para nao tem dupla, e  outro valor com o i da dupla
 	}
 }
 
 void mostraDadoSensores(){
 	int b;
+	sleep(3);
 	for(b= 0; b < N ;b++ ){
-		printf("sensor %d - esta %d  \n", b, sensores[b][0]);	
+		printf("sensor %d - dupla %d  \n", b, sensores[b][2]);	
 	}
 	printf("\n");
+
 }
 
 
 void *sensor(void *j) {
 	int i = *(int *)j;
-	while (TRUE) {  /* repete eternamente */
-	
-		printf("dentro do while");
+	while (1) {  /* repete eternamente */
+		sleep(1);
+		mostraDadoSensores();
 		pegaSensor(i);
-	
+		mostraDadoSensores();
+		escrita(i);
+		
 	}
 }
 
 void pegaSensor(int i){
+	sem_wait(&mutex);
+	int dupla;
+	if (sensores[i][2]==-1){//Não tem dupla, procura dupla
+	 procuraDupla(i);
 	
+	}
+	sem_post(&mutex);
+
 }
 
+void procuraDupla(int i){
+	sem_wait(&semaforoSensor[i]);
+	int b;
+	for (b=0;b<N;b++){
+		if (sensores[b][2]==-1 && b!=i){
+			sem_wait(&semaforoSensor[b]);
+			sensores[b][2]=i;
+			sensores[i][2]=b;
+			printf("================ %d é a dupla de %d ============== \n", b, i);
+			mostraDadoSensores();
+		
+			escrita(i);
+		}
+	}
+
+}
+
+void escrita(int i){
+	
+	if (sensores[i][2]!=-1){
+		int semaforoDupla=sensores[i][2];
+
+		sensores[i][2]=-1;
+		sensores[semaforoDupla][2]=-1;
+		sleep(1);
+			printf("escrevendo e liberando sensores \n");
+		sem_post(&semaforoSensor[i]);
+		sem_post(&semaforoSensor[semaforoDupla]);
+	
+		
+		
+	}
+}
 //////MAIN///////////
 main(){
 
 int  iret1, iret2, iret3, iret4, iret5;
 
-int i;
-int p[N] ;
+geraDadosSensores(); //inclui os valores aleatórios para os sensores
 void *thread_result;
 pthread_t thread[N];
 sem_init(&mutex, 0, 1);
 
-geraDadosSensores(); //inclui os valores aleatórios para os sensores
+
 mostraDadoSensores();
 //inicialização dos semáforos por sensor...
 
-     for(i= 0; i < N ;i++ ){
+    for(i= 0; i < N ;i++ ){
 		sem_init(&semaforoSensor[i], 0, 1);
 	}
 
@@ -86,9 +129,9 @@ mostraDadoSensores();
 	}	
 
 	for(i=0;i<N;i++){
-		pthread_join(&thread[i],&thread_result);
+		pthread_join(thread[i],&thread_result);
+	
 	}	
 	
-return 0;
 }
 
