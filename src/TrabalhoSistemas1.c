@@ -11,7 +11,7 @@
 	sem_t mutex;
 	
 	int   state[N];
-	struct Fila umaFila;
+	struct Fila fila;
 	//array para controlar o estado dos filosofos
 	//coluna 0=> valor aleatorio
 	//coluna 1=> numero do sensor ou nome
@@ -61,8 +61,8 @@ void inserir(struct Fila *f, int sensor1, int dadoSensor1, int sensor2, int dado
 	f->nItens++; // mais um item inserido
 }
 
-int remover( struct Fila *f ) { // pega o item do começo da fila
-	int temp = f->dados[f->primeiro++].dadoSensor1; // pega o valor e incrementa o primeiro
+struct sSensor remover( struct Fila *f ) { // pega o item do começo da fila
+	struct sSensor temp = f->dados[f->primeiro++]; // pega o valor e incrementa o primeiro
 	if(f->primeiro == f->capacidade)
 		f->primeiro = 0;
 	f->nItens--;  // um item retirado
@@ -159,7 +159,7 @@ void mostrarFila(struct Fila *f){
 	void escrita(int i){
 		sem_wait(&escreveFila);
 		if (sensores[i][2]!=-1){
-			if (!estaCheia(&umaFila)){
+			if (!estaCheia(&fila)){
 				
 			int semaforoDupla=sensores[i][2];
 	
@@ -167,8 +167,8 @@ void mostrarFila(struct Fila *f){
 			sensores[semaforoDupla][2]=-1;
 			sleep(1);
 			printf("----->>>>escrevendo e liberando sensores \n");
-			inserir(&umaFila,i, sensores[i][0], semaforoDupla,sensores[semaforoDupla][0] );
-			mostrarFila(&umaFila);
+			inserir(&fila,i, sensores[i][0], semaforoDupla,sensores[semaforoDupla][0] );
+			mostrarFila(&fila);
 			sem_post(&semaforoSensor[i]);
 			sem_post(&escreveFila);
 			}else{
@@ -179,15 +179,21 @@ void mostrarFila(struct Fila *f){
 	
 	void visualizador(){
 		
+		sem_wait(&leFila);
+		if (!estaVazia(&fila)){
+			struct sSensor ParFila = remover(&fila);
+			printf("da fila %d", ParFila.sensor1);
+			sem_post(&escreveFila);
+	
+		}
+			sem_post(&leFila);
+		}
 	}
 	//////MAIN///////////
 	main(){
 	
 	int  iret1, iret2, iret3, iret4, iret5;
-	
-
-
-	criarFila(&umaFila);
+	criarFila(&fila);
 	geraDadosSensores(); //inclui os valores aleat�rios para os sensores
 	void *thread_result;
 	pthread_t thread[N];
