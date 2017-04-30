@@ -17,7 +17,6 @@
 	//coluna 1=> numero do sensor ou nome
 	//coluna 2=> dupla do sensor
 	int  sensores[N][3];
-	int numeroAleatorio;
 	int i;
 	//uma thread para cada filósofo
 	
@@ -35,16 +34,25 @@
 		int sensor2;
 		int dadoSensor2;
     };
-int maxTam = 2;
-struct Fila {
-	int capacidade;
-	struct sSensor dados[2];
-	int primeiro;
-	int ultimo;
-	int nItens; 
-};
+	int maxTam = 1;
+	struct Fila {
+		int capacidade;
+		struct sSensor dados[1];
+		int primeiro;
+		int ultimo;
+		int nItens; 
+	};
+	
+	struct Dados{
+		int desvioPadrao;
+		int media;
+		int variancia;
+		int quantidadeDados;
+		int soma;
+	}DADOS[5];
+	
 void criarFila( struct Fila *f) { 
-	f->capacidade = 2;
+	f->capacidade = 1;
 	f->primeiro = 0;
 	f->ultimo = -1;
 	f->nItens = 0; 
@@ -58,14 +66,14 @@ void inserir(struct Fila *f, int sensor1, int dadoSensor1, int sensor2, int dado
 	f->dados[f->ultimo].dadoSensor1 = dadoSensor1;
 	f->dados[f->ultimo].sensor2 = sensor2;
 	f->dados[f->ultimo].dadoSensor2 = dadoSensor2;
-	f->nItens++; // mais um item inserido
+	f->nItens++; 
 }
 
-struct sSensor remover( struct Fila *f ) { // pega o item do comeÃ§o da fila
-	struct sSensor temp = f->dados[f->primeiro++]; // pega o valor e incrementa o primeiro
+struct sSensor remover( struct Fila *f ) { // pega o primeiro da fila
+	struct sSensor temp = f->dados[f->primeiro++]; 
 	if(f->primeiro == f->capacidade)
 		f->primeiro = 0;
-	f->nItens--;  // um item retirado
+	f->nItens--;  
 	return temp;
 }
 
@@ -92,18 +100,24 @@ void mostrarFila(struct Fila *f){
 	
 
 	/* i: numero do sensor, de 0 a N-1 */
-	void geraDadosSensores(){
-		int b;
+	void geraDadosSensores(int b){
+		
 		srand(time(NULL));
-	  for(b= 0; b < N ;b++ ){
-		numeroAleatorio=(rand())%50;//pega o resto da divisão do numero aleatorio por 50 (um numero menor q 50)
+	
+		int numeroAleatorio=(rand())%50;//pega o resto da divisão do numero aleatorio por 50 (um numero menor q 50)
 		printf("numero aleatorio %d \n", numeroAleatorio);
 		sensores[b][0]=numeroAleatorio;
 	 	sensores[b][1]=b;//colocar  o nome do sensor talvez (?)	
+	
+		
+	}
+	void iniciaSensores(){
+		int b;
+		srand(time(NULL));
+	  for(b= 0; b < N ;b++ ){
 		sensores[b][2]=-1;//-1 para nao tem dupla, e  outro valor com o i da dupla
 		}
 	}
-	
 	void mostraDadoSensores(){
 		int b;
 		sleep(2);
@@ -118,8 +132,9 @@ void mostrarFila(struct Fila *f){
 	
 	void *sensor(void *j) {
 		int i = *(int *)j;
-		while (1) {  /* repete eternamente */
+		while (1) { 
 			sleep(1);
+			geraDadosSensores(i);
 			pegaSensor(i);
 			mostraDadoSensores();
 			escrita(i);
@@ -166,13 +181,15 @@ void mostrarFila(struct Fila *f){
 			sensores[i][2]=-1;
 			sensores[semaforoDupla][2]=-1;
 			sleep(1);
-			printf("----->>>>escrevendo e liberando sensores \n");
+			printf("\n ----->>>>escrevendo e liberando sensores \n");
 			inserir(&fila,i, sensores[i][0], semaforoDupla,sensores[semaforoDupla][0] );
 			mostrarFila(&fila);
 			sem_post(&semaforoSensor[i]);
 			sem_post(&escreveFila);
 			}else{
-				printf("fila cheia");
+				printf("\n\n\n----------------------------------------fila cheia");
+			sleep(1);
+				
 			}
 		}
 	}
@@ -182,24 +199,65 @@ void mostrarFila(struct Fila *f){
 		sem_wait(&leFila);
 		if (!estaVazia(&fila)){
 			struct sSensor ParFila = remover(&fila);
-			printf("da fila %d", ParFila.sensor1);
+			sumarizarDados(ParFila);
 			sem_post(&escreveFila);
-	
 		}
 			sem_post(&leFila);
+	}
+	
+	void sumarizarDados(struct sSensor ParFila){
+		
+		printf("\n\n--------------->%d %d", ParFila.sensor1, ParFila.sensor2);
+		if(ParFila.sensor1==0 || ParFila.sensor2==0){
+			printf("\n\n\n 00");
+			DADOS[0].soma+=ParFila.dadoSensor1;
+				DADOS[0].quantidadeDados+=1;
+		}
+		if(ParFila.sensor1==1 || ParFila.sensor2==1){
+			printf("\n\n\n 11");
+			DADOS[1].soma+=ParFila.dadoSensor1;
+			DADOS[1].quantidadeDados+=1;
+		}
+		if(ParFila.sensor1==2 || ParFila.sensor2==2){
+			printf("\n\n\n 22");
+			DADOS[2].soma+=ParFila.dadoSensor1;
+			DADOS[2].quantidadeDados+=1;
+		}		
+		if(ParFila.sensor1==3 || ParFila.sensor2==3){
+			DADOS[3].soma+=ParFila.dadoSensor1;
+			DADOS[3].quantidadeDados+=1;
+			printf("\n\n\n 33");
+		}
+		if(ParFila.sensor1==4 || ParFila.sensor2==4){
+			DADOS[4].soma+=ParFila.dadoSensor1;
+			DADOS[4].quantidadeDados+=1;
+			printf("\n\n\n 44");
+		}
+		int cont;		
+		for(cont=0;cont<5;cont++){
+			
+			if (DADOS[cont].quantidadeDados>0){
+				int media = DADOS[cont].soma/DADOS[cont].quantidadeDados;
+					printf("\n===================================");
+			printf("\n=================================== %d ------ sensor %d", media, cont);
+			}else{
+					printf("\n===================================");
+			printf("\n=================================== %d ------ sensor %d", DADOS[cont].soma, cont);
+			}
+		
 		}
 	}
+	
 	//////MAIN///////////
 	main(){
-	
-	int  iret1, iret2, iret3, iret4, iret5;
 	criarFila(&fila);
-	geraDadosSensores(); //inclui os valores aleatórios para os sensores
+	iniciaSensores(); //inclui os valores de duplas -1 iniciais
 	void *thread_result;
 	pthread_t thread[N];
+	
 	sem_init(&mutex, 0, 1);
 	sem_init(&escreveFila, 0, 1);
-	
+	sem_init(&leFila, 0, 1);
 	
 	mostraDadoSensores();
 	//inicialização dos semáforos por sensor...
@@ -214,7 +272,6 @@ void mostrarFila(struct Fila *f){
 	
 		for(i=0;i<N;i++){
 			pthread_join(thread[i],&thread_result);
-		
 		}	
 		
 	}
