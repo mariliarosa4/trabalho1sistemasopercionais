@@ -9,6 +9,7 @@
 	sem_t escreveFila;                //exclusao mutua para regioes de acesso a fila cheia
 	sem_t leFila; 				//exclusão mutua para fila vazia
 	sem_t mutex;
+	sem_t paraExame;
 	
 	int   state[N];
 	struct Fila fila;
@@ -34,10 +35,10 @@
 		int sensor2;
 		int dadoSensor2;
     };
-	int maxTam = 1;
+	int maxTam = 2;
 	struct Fila {
 		int capacidade;
-		struct sSensor dados[1];
+		struct sSensor dados[2];
 		int primeiro;
 		int ultimo;
 		int nItens; 
@@ -52,7 +53,7 @@
 	}DADOS[5];
 	
 void criarFila( struct Fila *f) { 
-	f->capacidade = 1;
+	f->capacidade = 2;
 	f->primeiro = 0;
 	f->ultimo = -1;
 	f->nItens = 0; 
@@ -67,6 +68,7 @@ void inserir(struct Fila *f, int sensor1, int dadoSensor1, int sensor2, int dado
 	f->dados[f->ultimo].sensor2 = sensor2;
 	f->dados[f->ultimo].dadoSensor2 = dadoSensor2;
 	f->nItens++; 
+	mostrarFila(&fila);
 }
 
 struct sSensor remover( struct Fila *f ) { // pega o primeiro da fila
@@ -88,7 +90,7 @@ int estaCheia( struct Fila *f ) { // retorna verdadeiro se a fila estÃ¡ cheia
 void mostrarFila(struct Fila *f){
 	int cont, i; 
 	for ( cont=0, i= f->primeiro; cont < f->nItens; cont++){
-		printf("Sensor 1 %d - dadoSensor1 %d - Sensor2 %d - dadoSensor2 %d ",f->dados[i++].sensor1, f->dados[i++].dadoSensor1, f->dados[i++].sensor2,f->dados[i++].dadoSensor2);
+		printf("Sensor 1 %d - dadoSensor1 %d - Sensor2 %d - dadoSensor2 %d ",f->dados[i].sensor1, f->dados[i].dadoSensor1, f->dados[i].sensor2,f->dados[i].dadoSensor2);
 		if (i == f->capacidade)
 			i=0;
 	}
@@ -136,7 +138,6 @@ void mostrarFila(struct Fila *f){
 			sleep(1);
 			geraDadosSensores(i);
 			pegaSensor(i);
-			mostraDadoSensores();
 			escrita(i);
 			visualizador();
 		}
@@ -162,6 +163,7 @@ void mostrarFila(struct Fila *f){
 			sensorAleatorio=(rand())%5;// aleatorio de 0 a 4	
 			if (sensores[sensorAleatorio][2]==-1 && sensorAleatorio!=i){
 				sem_post(&semaforoSensor[i]);
+				sleep(1);
 				sensores[sensorAleatorio][2]=i;
 				sensores[i][2]=sensorAleatorio;
 				printf("\n ================ %d é a dupla de %d ============== \n", sensorAleatorio, i);
@@ -188,12 +190,12 @@ void mostrarFila(struct Fila *f){
 			sem_post(&escreveFila);
 			}else{
 				printf("\n\n\n----------------------------------------fila cheia");
-			sleep(1);
-				
-			}
+			//bloqueia todos os sensores
+		
 		}
 	}
-	
+}
+
 	void visualizador(){
 		
 		sem_wait(&leFila);
@@ -258,6 +260,7 @@ void mostrarFila(struct Fila *f){
 	sem_init(&mutex, 0, 1);
 	sem_init(&escreveFila, 0, 1);
 	sem_init(&leFila, 0, 1);
+	sem_init(&paraExame, 0, 1);
 	
 	mostraDadoSensores();
 	//inicialização dos semáforos por sensor...
