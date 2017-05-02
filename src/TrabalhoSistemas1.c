@@ -50,6 +50,8 @@
 		int variancia;
 		int quantidadeDados;
 		int soma;
+		int valorMinimo;
+		int valorMaximo;
 	}DADOS[5];
 	
 void criarFila( struct Fila *f) { 
@@ -210,46 +212,132 @@ void mostrarFila(struct Fila *f){
 	void sumarizarDados(struct sSensor ParFila){
 		
 		printf("\n\n--------------->%d %d", ParFila.sensor1, ParFila.sensor2);
-		if(ParFila.sensor1==0 || ParFila.sensor2==0){
-			printf("\n\n\n 00");
-			DADOS[0].soma+=ParFila.dadoSensor1;
-				DADOS[0].quantidadeDados+=1;
-		}
-		if(ParFila.sensor1==1 || ParFila.sensor2==1){
-			printf("\n\n\n 11");
-			DADOS[1].soma+=ParFila.dadoSensor1;
-			DADOS[1].quantidadeDados+=1;
-		}
-		if(ParFila.sensor1==2 || ParFila.sensor2==2){
-			printf("\n\n\n 22");
-			DADOS[2].soma+=ParFila.dadoSensor1;
-			DADOS[2].quantidadeDados+=1;
-		}		
-		if(ParFila.sensor1==3 || ParFila.sensor2==3){
-			DADOS[3].soma+=ParFila.dadoSensor1;
-			DADOS[3].quantidadeDados+=1;
-			printf("\n\n\n 33");
-		}
-		if(ParFila.sensor1==4 || ParFila.sensor2==4){
-			DADOS[4].soma+=ParFila.dadoSensor1;
-			DADOS[4].quantidadeDados+=1;
-			printf("\n\n\n 44");
-		}
+		sumarizaSensor1(ParFila.sensor1, ParFila.dadoSensor1);
+		sumarizaSensor2(ParFila.sensor2, ParFila.dadoSensor2);
+			
+		sleep(3);
 		int cont;		
 		for(cont=0;cont<5;cont++){
-			
-			if (DADOS[cont].quantidadeDados>0){
-				int media = DADOS[cont].soma/DADOS[cont].quantidadeDados;
-					printf("\n===================================");
-			printf("\n=================================== %d ------ sensor %d", media, cont);
-			}else{
-					printf("\n===================================");
-			printf("\n=================================== %d ------ sensor %d", DADOS[cont].soma, cont);
-			}
+
+			printf("\n=================================== %d ------ sensor %d ----------- quantidade %d", DADOS[cont].media, cont, DADOS[cont].quantidadeDados);
 		
+			
 		}
+		sleep(2);
 	}
 	
+	void sumarizaSensor2(int idSensor2, int dadoSensor2){
+			switch (idSensor2)	{
+			   case 0:
+			    printf("\n\n\n 00");
+				DADOS[0].soma+=dadoSensor2;
+				DADOS[0].quantidadeDados+=1;
+				if (DADOS[0].quantidadeDados>0){
+					DADOS[0].media = DADOS[0].soma/DADOS[0].quantidadeDados;
+				}else{
+					DADOS[0].media =0;
+				}
+			   break;
+			   case 1:
+			    printf("\n\n\n 11");
+				DADOS[1].soma+=dadoSensor2;
+				DADOS[1].quantidadeDados+=1;
+				if (DADOS[1].quantidadeDados>0){
+					DADOS[1].media = DADOS[1].soma/DADOS[1].quantidadeDados;
+				}else{
+					DADOS[1].media =0;
+				}
+			   break;
+				case 2:
+					printf("\n\n\n 22");
+				DADOS[2].soma+=dadoSensor2;
+				DADOS[2].quantidadeDados+=1;
+				if (DADOS[2].quantidadeDados>0){
+					DADOS[2].media = DADOS[2].soma/DADOS[2].quantidadeDados;
+				}else{
+					DADOS[2].media =0;
+				}
+				break;
+				case 3:
+					printf("\n\n\n 33");
+				DADOS[3].soma+=dadoSensor2;
+				DADOS[3].quantidadeDados+=1;
+				if (DADOS[3].quantidadeDados>0){
+					DADOS[3].media = DADOS[3].soma/DADOS[3].quantidadeDados;
+				}else{
+					DADOS[3].media =0;
+				}
+				break;
+				case 4:
+					printf("\n\n\n 44");
+				DADOS[4].soma+=dadoSensor2;
+				DADOS[4].quantidadeDados+=1;
+				if (DADOS[4].quantidadeDados>0){
+					DADOS[4].media = DADOS[4].soma/DADOS[4].quantidadeDados;
+				}else{
+					DADOS[4].media =0;
+				}
+				break;
+			   default:
+			     printf("algo ocorreu");
+			}
+	}
+		void sumarizaSensor1(int idSensor1, int dadoSensor1){
+			switch (idSensor1)	{
+			   case 0:
+			    printf("\n\n\n 00");
+				DADOS[0].soma+=dadoSensor1;
+				DADOS[0].quantidadeDados+=1;
+				if (DADOS[0].quantidadeDados>0){
+					DADOS[0].media = DADOS[0].soma/DADOS[0].quantidadeDados;
+				}else{
+					DADOS[0].media =0;
+				}
+			   break;
+			   case 1:
+			    printf("\n\n\n 1");
+				DADOS[1].soma+=dadoSensor1;
+				DADOS[1].quantidadeDados+=1;
+				if (DADOS[1].quantidadeDados>0){
+					DADOS[1].media = DADOS[1].soma/DADOS[1].quantidadeDados;
+				}else{
+					DADOS[1].media =0;
+				}
+			   break;
+				case 2:
+					printf("\n\n\n 2");
+				DADOS[2].soma+=dadoSensor1;
+				DADOS[2].quantidadeDados+=1;
+				if (DADOS[2].quantidadeDados>0){
+					DADOS[2].media = DADOS[2].soma/DADOS[2].quantidadeDados;
+				}else{
+					DADOS[2].media =0;
+				}
+				break;
+				case 3:
+					printf("\n\n\n 3");
+				DADOS[3].soma+=dadoSensor1;
+				DADOS[3].quantidadeDados+=1;
+				if (DADOS[3].quantidadeDados>0){
+					DADOS[3].media = DADOS[3].soma/DADOS[3].quantidadeDados;
+				}else{
+					DADOS[3].media =0;
+				}
+				break;
+				case 4:
+					printf("\n\n\n 4");
+				DADOS[4].soma+=dadoSensor1;
+				DADOS[4].quantidadeDados+=1;
+				if (DADOS[4].quantidadeDados>0){
+					DADOS[4].media = DADOS[4].soma/DADOS[4].quantidadeDados;
+				}else{
+					DADOS[4].media =0;
+				}
+				break;
+			   default:
+			     printf("algo ocorreu");
+			}
+	}
 	//////MAIN///////////
 	main(){
 	criarFila(&fila);
