@@ -237,6 +237,7 @@ void sumarizarDados(struct sSensor ParFila) {
     int cont;
     time ( &rawtime );
   	timeinfo = localtime ( &rawtime );
+  	puts("\a");
     printf("\n \n==================== %s ========================\n",asctime(timeinfo) );
     for (cont = 0; cont < 5; cont++) {
     	switch (cont){
