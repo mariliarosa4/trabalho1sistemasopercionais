@@ -102,7 +102,7 @@ void geraDadosSensores(int b) {
     srand(time(NULL));
     if (b == -1) {//pela primeira vez
         for (c = 0; c < 5; c++) {
-            numeroAleatorio = 1 + (rand()) % 50; 
+            numeroAleatorio = 1 + (rand()) % 150; 
            // printf("numero aleatorio %d \n", numeroAleatorio);
             sensores[b][0] = numeroAleatorio;
             sensores[b][1] = b; 	
@@ -191,7 +191,7 @@ sem_wait(&escreveFila);
             sensores[semaforoDupla][2] = -1;
             sleep(1);
           //  printf("\n ----->>>>escrevendo e liberando sensores \n");
-            sleep(2);
+            sleep(1);
             inserir(&fila, i, sensores[i][0], semaforoDupla, sensores[semaforoDupla][0]);
             mostrarFila(&fila);
             sem_post(&semaforoSensor[i]);
@@ -225,28 +225,28 @@ void sumarizarDados(struct sSensor ParFila) {
     time ( &rawtime );
   	timeinfo = localtime ( &rawtime );
   	puts("\a");
-    printf("\n \n============= %s =============\n",asctime(timeinfo) );
+    printf("\n \n==================================== %s\n",asctime(timeinfo) );
     for (cont = 0; cont < 5; cont++) {
     	switch (cont){
     			case 0:
-    				printf("(i) ritmo cardíaco: ");
+    				printf(" (i) ritmo cardiaco: ");
     				break;
     			case 1:
-    				printf("(ii) suprimento sanguíneo: ");
+    				printf(" (ii) suprimento sanguineo: ");
     				break;
     			case 2:
-    				printf("(iii) primento de oxigênio: ");
+    				printf(" (iii) primento de oxigenio: ");
     				break;
     			case 3:
-    				printf("(iv) despolarização atrial: ");
+    				printf(" (iv) despolarização atrial: ");
     				break;
     			case 4: 
-    				printf("(v) repolarização ventricular: ");
+    				printf(" (v) repolarização ventricular: ");
     				break;
     			default:
     				printf("outro sensor");			
 		}
-        printf("Média:  %d --- sensor: %d --- quantidade: %d ---valor MAXIMO: %d --- valor MINIMO: %d \n \n", DADOS[cont].media, cont, DADOS[cont].quantidadeDados, DADOS[cont].valorMaximo, DADOS[cont].valorMinimo);
+        printf("Media:  %d --- sensor: %d --- quantidade: %d ---valor MAXIMO: %d --- valor MINIMO: %d \n \n", DADOS[cont].media, cont, DADOS[cont].quantidadeDados, DADOS[cont].valorMaximo, DADOS[cont].valorMinimo);
     }
     sleep(2);
 }
