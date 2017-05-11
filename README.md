@@ -1,4 +1,6 @@
-# **Objetivo**: # desenvolver os conceitos adquiridos na disciplina de Sistemas Operacionais,
+# algoritmo dinâmico para um sistema eletrocardiograma #
+
+**Objetivo**:desenvolver os conceitos adquiridos na disciplina de Sistemas Operacionais,
 tais como fluxo de execução, estados e descritores de processos e algoritmos de
 escalonamento. Além disso, estimular a desenvoltura e apresentação oral do aluno.
 O aluno está sendo convidado a desenvolver um algoritmo dinâmico para um
