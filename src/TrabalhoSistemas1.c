@@ -3,34 +3,25 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include<time.h>
-
 #define N 5  /* qtdade de  sensores */
 #define TAMANHOFILA 1
-
 sem_t semaforoSensor[N]; //um semaforo por sensor
 sem_t escreveFila; //exclusao mutua para regioes de acesso a fila cheia
 sem_t leFila; //exclusão mutua para fila vazia
 sem_t mutex;
-sem_t paraExame;
-
-int state[N];
+sem_t mutex2;
 struct Fila fila;
-//array para controlar o estado dos filosofos
-//coluna 0=> valor aleatorio
-//coluna 1=> numero do sensor ou nome
-//coluna 2=> dupla do sensor
-time_t rawtime;
-struct tm * timeinfo;
 int sensores[N][3];
 int i;
-//uma thread para cada filósofo
-
-
-// prototipos...
+int contDuplas=0;
+//array para controlar o estado dos filosofos
+//coluna 0=> valor aleatorio
+//coluna 1=> numero do sensor 
+//coluna 2=> dupla do sensor
+time_t rawtime;
+struct tm * timeinfo; //informações de tempo
 void geraDadosSensores(int b);
-
 void pegaDuplaSensor(int i);
-
 
 ////////////////////////////fila//////////////////////////////////////////
 
@@ -48,7 +39,7 @@ struct Fila {
     int ultimo;
     int nItens;
 };
-
+///////////////// Struct dos dados Sumarizados /////////////////////////
 struct Dados {
     int desvioPadrao;
     int media;
@@ -70,7 +61,6 @@ void inserir(struct Fila *f, int sensor1, int dadoSensor1, int sensor2, int dado
     if (f->ultimo == f->capacidade - 1)
         f->ultimo = -1;
     f->ultimo++;
-
     f->dados[f->ultimo].sensor1 = sensor1; // incrementa ultimo e insere
     f->dados[f->ultimo].dadoSensor1 = dadoSensor1;
     f->dados[f->ultimo].sensor2 = sensor2;
@@ -78,7 +68,6 @@ void inserir(struct Fila *f, int sensor1, int dadoSensor1, int sensor2, int dado
     f->nItens++;
 
 }
-
 struct sSensor remover(struct Fila *f) { // pega o primeiro da fila
     struct sSensor temp = f->dados[f->primeiro++];
     if (f->primeiro == f->capacidade)
@@ -86,21 +75,17 @@ struct sSensor remover(struct Fila *f) { // pega o primeiro da fila
     f->nItens--;
     return temp;
 }
-
 int estaVazia(struct Fila *f) { // retorna verdadeiro se a fila estÃ¡ vazia
     return (f->nItens == 0);
 }
-
 int estaCheia(struct Fila *f) { // retorna verdadeiro se a fila estÃ¡ cheia
     return (f->nItens == f->capacidade);
 }
-
 void mostrarFila(struct Fila *f) {
-
     int cont, i;
     i = f->primeiro;
     while (i <= f->ultimo) {
-        printf("Sensor1: %d - dadoSensor1: %d - Sensor2: %d - dadoSensor2: %d ", f->dados[i].sensor1, f->dados[i].dadoSensor1, f->dados[i].sensor2, f->dados[i].dadoSensor2);
+      ///  printf("Sensor1: %d - dadoSensor1: %d - Sensor2: %d - dadoSensor2: %d ", f->dados[i].sensor1, f->dados[i].dadoSensor1, f->dados[i].sensor2, f->dados[i].dadoSensor2);
         i++;
     }
 
@@ -117,16 +102,16 @@ void geraDadosSensores(int b) {
     srand(time(NULL));
     if (b == -1) {//pela primeira vez
         for (c = 0; c < 5; c++) {
-            numeroAleatorio = 1 + (rand()) % 50; //pega o resto da divisão do numero aleatorio por 50 (um numero menor q 50)
-            printf("numero aleatorio %d \n", numeroAleatorio);
+            numeroAleatorio = 1 + (rand()) % 50; 
+           // printf("numero aleatorio %d \n", numeroAleatorio);
             sensores[b][0] = numeroAleatorio;
-            sensores[b][1] = b; //colocar  o nome do sensor talvez (?)	
+            sensores[b][1] = b; 	
         }
     } else {
-        numeroAleatorio = 1 + (rand()) % 50; //pega o resto da divisão do numero aleatorio por 50 (um numero menor q 50)
-        printf("numero aleatorio %d  do id: %d \n", numeroAleatorio, b);
+        numeroAleatorio = 1 + (rand()) % 50; 
+       // printf("numero aleatorio %d  do id: %d \n", numeroAleatorio, b);
         sensores[b][0] = numeroAleatorio;
-        sensores[b][1] = b; //colocar  o nome do sensor talvez (?)		
+        sensores[b][1] = b; 	
     }
 
 }
@@ -144,7 +129,7 @@ void mostraDadoSensores(i) {
     sleep(2);
     printf("\n");
     for (b = 0; b < N; b++) {
-        printf("sensor %d - dupla %d  \n", b, sensores[b][2]);
+      //  printf("sensor %d - dupla %d  \n", b, sensores[b][2]);
     }
     printf("\n");
 
@@ -153,7 +138,9 @@ void mostraDadoSensores(i) {
 void *sensor(void *j) {
     int i = *(int *) j;
     while (1) {
+    
         pegaSensor(i);
+        
         escrita(i);
         visualizador();
     }
@@ -161,7 +148,7 @@ void *sensor(void *j) {
 
 void pegaSensor(int i) {
     sem_wait(&mutex);
-
+		printf("\n EXAME EM EXECUCAO...");
     int dupla;
     if (sensores[i][2] == -1) {//Não tem dupla, procura dupla
         procuraDupla(i);
@@ -179,13 +166,13 @@ void procuraDupla(int i) {
         sensorAleatorio = (rand()) % 5; // aleatorio de 0 a 4	
         if (sensores[sensorAleatorio][2] == -1 && sensorAleatorio != i) {
             sem_post(&semaforoSensor[i]);
-            sleep(3);
+            sleep(1);
             sensores[sensorAleatorio][2] = i;
             sensores[i][2] = sensorAleatorio;
             geraDadosSensores(i);
             sleep(1);
             geraDadosSensores(sensorAleatorio);
-            printf("\n ================ %d é a dupla de %d ============== \n", sensorAleatorio, i);
+          //  printf("\n ================ %d é a dupla de %d ============== \n", sensorAleatorio, i);
             achou = 1;
             break;
         }
@@ -193,27 +180,29 @@ void procuraDupla(int i) {
 }
 
 void escrita(int i) {
-    sem_wait(&escreveFila);
+sem_wait(&escreveFila);
     if (sensores[i][2] != -1) {
         if (!estaCheia(&fila)) {
-
+			contDuplas=0;
+			sleep(2);
             int semaforoDupla = sensores[i][2];
 
             sensores[i][2] = -1;
             sensores[semaforoDupla][2] = -1;
             sleep(1);
-            printf("\n ----->>>>escrevendo e liberando sensores \n");
-            printf("semaforo dupla %d", sensores[semaforoDupla][0]);
+          //  printf("\n ----->>>>escrevendo e liberando sensores \n");
             sleep(2);
             inserir(&fila, i, sensores[i][0], semaforoDupla, sensores[semaforoDupla][0]);
             mostrarFila(&fila);
             sem_post(&semaforoSensor[i]);
-            sem_post(&escreveFila);
+           sem_post(&escreveFila);
         } else {
-            printf("\n\n\n----------------------------------------fila cheia");
-
+           // printf("\n\n\n----------------------------------------fila cheia");
+			//não libera o semaforo
         }
     }
+//}	
+
 }
 
 void visualizador() {
@@ -228,8 +217,6 @@ void visualizador() {
 }
 
 void sumarizarDados(struct sSensor ParFila) {
-
-    printf("\n\n--------------->%d %d", ParFila.sensor1, ParFila.sensor2);
     sumarizaSensor(ParFila.sensor1, ParFila.dadoSensor1);
     sleep(1);
     sumarizaSensor(ParFila.sensor2, ParFila.dadoSensor2);
@@ -238,7 +225,7 @@ void sumarizarDados(struct sSensor ParFila) {
     time ( &rawtime );
   	timeinfo = localtime ( &rawtime );
   	puts("\a");
-    printf("\n \n==================== %s ========================\n",asctime(timeinfo) );
+    printf("\n \n============= %s =============\n",asctime(timeinfo) );
     for (cont = 0; cont < 5; cont++) {
     	switch (cont){
     			case 0:
@@ -297,28 +284,21 @@ void definirMaiorMenor(int idSensor, int dadoSensor) {
 //////MAIN///////////
 
 main() {
-  
     criarFila(&fila);
     iniciaSensores(); //inclui os valores de duplas -1 iniciais
     void *thread_result;
     pthread_t thread[N];
-
     sem_init(&mutex, 0, 1);
+    sem_init(&mutex2, 0, 1);
     sem_init(&escreveFila, 0, 1);
     sem_init(&leFila, 0, 1);
-    sem_init(&paraExame, 0, 1);
     geraDadosSensores(-1);
-    mostraDadoSensores();
-    //inicialização dos semáforos por sensor...
-
     for (i = 0; i < N; i++) {
         sem_init(&semaforoSensor[i], 0, 1);
     }
-
     for (i = 0; i < N; i++) {
         pthread_create(&thread[i], NULL, sensor, &i);
     }
-
     for (i = 0; i < N; i++) {
         pthread_join(thread[i], &thread_result);
     }
