@@ -166,7 +166,7 @@ void procuraDupla(int i) {
         sensorAleatorio = (rand()) % 5; // aleatorio de 0 a 4	
         if (sensores[sensorAleatorio][2] == -1 && sensorAleatorio != i) {
             sem_post(&semaforoSensor[i]);
-            sleep(1);
+            sleep(3);
             sensores[sensorAleatorio][2] = i;
             sensores[i][2] = sensorAleatorio;
             geraDadosSensores(i);
@@ -183,15 +183,14 @@ void escrita(int i) {
 sem_wait(&escreveFila);
     if (sensores[i][2] != -1) {
         if (!estaCheia(&fila)) {
-			contDuplas=0;
-			sleep(2);
+
             int semaforoDupla = sensores[i][2];
 
             sensores[i][2] = -1;
             sensores[semaforoDupla][2] = -1;
             sleep(1);
           //  printf("\n ----->>>>escrevendo e liberando sensores \n");
-            sleep(1);
+            sleep(2);
             inserir(&fila, i, sensores[i][0], semaforoDupla, sensores[semaforoDupla][0]);
             mostrarFila(&fila);
             sem_post(&semaforoSensor[i]);

@@ -3,29 +3,40 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include<time.h>
-#define N 5  /* qtdade de  sensores */
+#define NUMEROSENSORES 5  
 #define TAMANHOFILA 1
-sem_t semaforoSensor[N]; //um semaforo por sensor
-sem_t escreveFila; //exclusao mutua para regioes de acesso a fila cheia
-sem_t leFila; //exclusão mutua para fila vazia
-sem_t mutex;
-sem_t mutex2;
+#define ATRIBUTOS 3
+#define INICIALIZADOR -1
+#define MAXIMOALEATORIO 50
+#define ATRIBUTO_VALORALEATORIO 0
+#define ATRIBUTO_NUMEROSENSOR 1
+#define ATRIBUTO_ID_DUPLA 2
+#define TRUE 1
+sem_t semaforoSensor[NUMEROSENSORES]; //um semaforo por sensor
+sem_t escreverNaFila; //exclusao mutua para regioes de acesso a fila cheia
+sem_t lerFila; //exclusão mutua para fila vazia
+sem_t sessaoCritica;
+
+
 struct Fila fila;
-int sensores[N][3];
-int i;
-int contDuplas=0;
-//array para controlar o estado dos filosofos
+int sensores[NUMEROSENSORES][ATRIBUTOS];
+//array para controlar o estado dos filosofos pelos atributos
 //coluna 0=> valor aleatorio
 //coluna 1=> numero do sensor 
 //coluna 2=> dupla do sensor
-time_t rawtime;
-struct tm * timeinfo; //informações de tempo
-void geraDadosSensores(int b);
-void pegaDuplaSensor(int i);
 
+
+time_t rawtime;
+struct tm * timeinfo;
+void gerarDadosSensores(int b);
+void pegaDuplaSensor(int i);
+void gerarDadoAleatorio(int idSensor);
+void coletor(int idSensor);
+void monitor(int i);
+void visualizador();
 ////////////////////////////fila//////////////////////////////////////////
 
-struct sSensor {
+struct parSensor {
     int sensor1;
     int dadoSensor1;
     int sensor2;
@@ -34,13 +45,14 @@ struct sSensor {
 
 struct Fila {
     int capacidade;
-    struct sSensor dados[TAMANHOFILA];
+    struct parSensor nodoParSensor[TAMANHOFILA];
     int primeiro;
     int ultimo;
-    int nItens;
+    int numeroItensNaFila;
 };
 ///////////////// Struct dos dados Sumarizados /////////////////////////
-struct Dados {
+
+struct DadosSumarizados {
     int desvioPadrao;
     int media;
     int variancia;
@@ -48,217 +60,183 @@ struct Dados {
     int soma;
     int valorMinimo;
     int valorMaximo;
-} DADOS[5];
+} DADOS_SUMARIZADOS[NUMEROSENSORES];
 
 void criarFila(struct Fila *f) {
     f->capacidade = TAMANHOFILA;
     f->primeiro = 0;
     f->ultimo = -1;
-    f->nItens = 0;
+    f->numeroItensNaFila = 0;
 }
 
-void inserir(struct Fila *f, int sensor1, int dadoSensor1, int sensor2, int dadoSensor2) {
+void inserirNodoDaFila(struct Fila *f, int sensor1, int dadoSensor1, int sensor2, int dadoSensor2) {
     if (f->ultimo == f->capacidade - 1)
         f->ultimo = -1;
     f->ultimo++;
-    f->dados[f->ultimo].sensor1 = sensor1; // incrementa ultimo e insere
-    f->dados[f->ultimo].dadoSensor1 = dadoSensor1;
-    f->dados[f->ultimo].sensor2 = sensor2;
-    f->dados[f->ultimo].dadoSensor2 = dadoSensor2;
-    f->nItens++;
+    f->nodoParSensor[f->ultimo].sensor1 = sensor1; // incrementa ultimo e insere
+    f->nodoParSensor[f->ultimo].dadoSensor1 = dadoSensor1;
+    f->nodoParSensor[f->ultimo].sensor2 = sensor2;
+    f->nodoParSensor[f->ultimo].dadoSensor2 = dadoSensor2;
+    f->numeroItensNaFila++;
 
 }
-struct sSensor remover(struct Fila *f) { // pega o primeiro da fila
-    struct sSensor temp = f->dados[f->primeiro++];
+
+struct parSensor removerNodoDaFila(struct Fila *f) {
+    struct parSensor primeiroDaFila = f->nodoParSensor[f->primeiro++];
     if (f->primeiro == f->capacidade)
         f->primeiro = 0;
-    f->nItens--;
-    return temp;
+    f->numeroItensNaFila--;
+    return primeiroDaFila;
 }
-int estaVazia(struct Fila *f) { // retorna verdadeiro se a fila estÃ¡ vazia
-    return (f->nItens == 0);
+
+int filaVazia(struct Fila *fila) { // retorna verdadeiro se a fila estÃ¡ vazia
+    return (fila->numeroItensNaFila == 0);
 }
-int estaCheia(struct Fila *f) { // retorna verdadeiro se a fila estÃ¡ cheia
-    return (f->nItens == f->capacidade);
+
+int filaCheia(struct Fila *fila) { // retorna verdadeiro se a fila estÃ¡ cheia
+    return (fila->numeroItensNaFila == fila->capacidade);
 }
-void mostrarFila(struct Fila *f) {
-    int cont, i;
-    i = f->primeiro;
-    while (i <= f->ultimo) {
-      ///  printf("Sensor1: %d - dadoSensor1: %d - Sensor2: %d - dadoSensor2: %d ", f->dados[i].sensor1, f->dados[i].dadoSensor1, f->dados[i].sensor2, f->dados[i].dadoSensor2);
-        i++;
-    }
 
 
-    printf("\n\n");
-
-}
 //////////////////////////fim das funcoes da fila/////////////////////////////////////////
 
-/* i: numero do sensor, de 0 a N-1 */
-void geraDadosSensores(int b) {
-    int c;
-    int numeroAleatorio;
-    srand(time(NULL));
-    if (b == -1) {//pela primeira vez
-        for (c = 0; c < 5; c++) {
-            numeroAleatorio = 1 + (rand()) % 150; 
-           // printf("numero aleatorio %d \n", numeroAleatorio);
-            sensores[b][0] = numeroAleatorio;
-            sensores[b][1] = b; 	
+void gerarDadosSensores(int idSensor) {
+    int contadorIdSensor;
+
+    if (idSensor == INICIALIZADOR) {
+        for (contadorIdSensor = 0; contadorIdSensor < NUMEROSENSORES; contadorIdSensor++) {
+            gerarDadoAleatorio(contadorIdSensor);
         }
     } else {
-        numeroAleatorio = 1 + (rand()) % 50; 
-       // printf("numero aleatorio %d  do id: %d \n", numeroAleatorio, b);
-        sensores[b][0] = numeroAleatorio;
-        sensores[b][1] = b; 	
+        gerarDadoAleatorio(idSensor);
     }
 
 }
 
-void iniciaSensores() {
-    int b;
+void gerarDadoAleatorio(int idSensor) {
+
     srand(time(NULL));
-    for (b = 0; b < N; b++) {
-        sensores[b][2] = -1; //-1 para nao tem dupla, e  outro valor com o i da dupla
-    }
+    int numeroAleatorio = 1 + (rand()) % MAXIMOALEATORIO;
+    sensores[idSensor][ATRIBUTO_VALORALEATORIO] = numeroAleatorio;
+    sensores[idSensor][ATRIBUTO_NUMEROSENSOR] = idSensor;
 }
 
-void mostraDadoSensores(i) {
-    int b;
-    sleep(2);
-    printf("\n");
-    for (b = 0; b < N; b++) {
-      //  printf("sensor %d - dupla %d  \n", b, sensores[b][2]);
+void iniciarSensores() {
+    srand(time(NULL));
+    int idSensor;
+    for (idSensor = 0; idSensor < NUMEROSENSORES; idSensor++) {
+        sensores[idSensor][ATRIBUTO_ID_DUPLA] = INICIALIZADOR;
     }
-    printf("\n");
-
 }
 
 void *sensor(void *j) {
-    int i = *(int *) j;
-    while (1) {
-    
-        pegaSensor(i);
-        
-        escrita(i);
+    int idSensor = *(int *) j;
+    while (TRUE) {
+        coletor(idSensor);
+        monitor(idSensor);
         visualizador();
     }
 }
 
-void pegaSensor(int i) {
-    sem_wait(&mutex);
-		printf("\n EXAME EM EXECUCAO...");
-    int dupla;
-    if (sensores[i][2] == -1) {//Não tem dupla, procura dupla
-        procuraDupla(i);
+void coletor(int idSensor) {
+    sem_wait(&sessaoCritica);
+    printf("\n EXAME EM EXECUCAO...");
+    if (sensores[idSensor][ATRIBUTO_ID_DUPLA] == INICIALIZADOR) {
+        procurarDuplaSensor(idSensor);
     }
-
-    sem_post(&mutex);
-    sem_wait(&semaforoSensor[i]);
+    sem_post(&sessaoCritica);
+    sem_wait(&semaforoSensor[idSensor]);
 }
 
-void procuraDupla(int i) {
+void procurarDuplaSensor(int idSensor) {
     srand(time(NULL));
-    int sensorAleatorio;
-    int achou = 0;
-    while (achou == 0) {
-        sensorAleatorio = (rand()) % 5; // aleatorio de 0 a 4	
-        if (sensores[sensorAleatorio][2] == -1 && sensorAleatorio != i) {
-            sem_post(&semaforoSensor[i]);
+    int idSensorAleatorio;
+    int achouDupla = 0;
+    while (achouDupla == 0) {
+        idSensorAleatorio = (rand()) % NUMEROSENSORES;
+        if (sensores[idSensorAleatorio][ATRIBUTO_ID_DUPLA] == INICIALIZADOR && idSensorAleatorio != idSensor) {
+            sem_post(&semaforoSensor[idSensor]);
+            sleep(3);
+            sensores[idSensorAleatorio][ATRIBUTO_ID_DUPLA] = idSensor;
+            sensores[idSensor][ATRIBUTO_ID_DUPLA] = idSensorAleatorio;
+            gerarDadosSensores(idSensor);
             sleep(1);
-            sensores[sensorAleatorio][2] = i;
-            sensores[i][2] = sensorAleatorio;
-            geraDadosSensores(i);
-            sleep(1);
-            geraDadosSensores(sensorAleatorio);
-          //  printf("\n ================ %d é a dupla de %d ============== \n", sensorAleatorio, i);
-            achou = 1;
+            gerarDadosSensores(idSensorAleatorio);
+            achouDupla = 1;
             break;
         }
     }
 }
 
-void escrita(int i) {
-sem_wait(&escreveFila);
-    if (sensores[i][2] != -1) {
-        if (!estaCheia(&fila)) {
-			contDuplas=0;
-			sleep(2);
-            int semaforoDupla = sensores[i][2];
-
-            sensores[i][2] = -1;
-            sensores[semaforoDupla][2] = -1;
-            sleep(1);
-          //  printf("\n ----->>>>escrevendo e liberando sensores \n");
-            sleep(1);
-            inserir(&fila, i, sensores[i][0], semaforoDupla, sensores[semaforoDupla][0]);
-            mostrarFila(&fila);
-            sem_post(&semaforoSensor[i]);
-           sem_post(&escreveFila);
-        } else {
-           // printf("\n\n\n----------------------------------------fila cheia");
-			//não libera o semaforo
+void monitor(int idSensor) {
+    sem_wait(&escreverNaFila);
+    if (sensores[idSensor][ATRIBUTO_ID_DUPLA] != INICIALIZADOR) {
+        if (!filaCheia(&fila)) {
+            int idDuplaIdSensorAtual = sensores[idSensor][ATRIBUTO_ID_DUPLA];
+            sensores[idSensor][ATRIBUTO_ID_DUPLA] = INICIALIZADOR;
+            sensores[idDuplaIdSensorAtual][ATRIBUTO_ID_DUPLA] = INICIALIZADOR;
+            sleep(3);
+            inserirNodoDaFila(&fila, idSensor, sensores[idSensor][ATRIBUTO_VALORALEATORIO], idDuplaIdSensorAtual, sensores[idDuplaIdSensorAtual][ATRIBUTO_VALORALEATORIO]);
+            sem_post(&semaforoSensor[idSensor]);
+            sem_post(&escreverNaFila);
         }
     }
-//}	
 
 }
 
 void visualizador() {
-
-    sem_wait(&leFila);
-    if (!estaVazia(&fila)) {
-        struct sSensor ParFila = remover(&fila);
+    sem_wait(&lerFila);
+    if (!filaVazia(&fila)) {
+        struct parSensor ParFila = removerNodoDaFila(&fila);
         sumarizarDados(ParFila);
-        sem_post(&escreveFila);
+        sem_post(&escreverNaFila);
     }
-    sem_post(&leFila);
+    sem_post(&lerFila);
 }
 
-void sumarizarDados(struct sSensor ParFila) {
+void sumarizarDados(struct parSensor ParFila) {
     sumarizaSensor(ParFila.sensor1, ParFila.dadoSensor1);
     sleep(1);
     sumarizaSensor(ParFila.sensor2, ParFila.dadoSensor2);
     sleep(1);
-    int cont;
-    time ( &rawtime );
-  	timeinfo = localtime ( &rawtime );
-  	puts("\a");
-    printf("\n \n==================================== %s\n",asctime(timeinfo) );
-    for (cont = 0; cont < 5; cont++) {
-    	switch (cont){
-    			case 0:
-    				printf(" (i) ritmo cardiaco: ");
-    				break;
-    			case 1:
-    				printf(" (ii) suprimento sanguineo: ");
-    				break;
-    			case 2:
-    				printf(" (iii) primento de oxigenio: ");
-    				break;
-    			case 3:
-    				printf(" (iv) despolarização atrial: ");
-    				break;
-    			case 4: 
-    				printf(" (v) repolarização ventricular: ");
-    				break;
-    			default:
-    				printf("outro sensor");			
-		}
-        printf("Media:  %d --- sensor: %d --- quantidade: %d ---valor MAXIMO: %d --- valor MINIMO: %d \n \n", DADOS[cont].media, cont, DADOS[cont].quantidadeDados, DADOS[cont].valorMaximo, DADOS[cont].valorMinimo);
+    int idSensor;
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    puts("\a"); //emite som do windows simulando um bipe cardiaco
+    printf("\n \n==================================== %s\n", asctime(timeinfo));
+    for (idSensor = 0; idSensor < NUMEROSENSORES; idSensor++) {
+        switch (idSensor) {
+            case 0:
+                printf(" (i) ritmo cardiaco: ");
+                break;
+            case 1:
+                printf(" (ii) suprimento sanguineo: ");
+                break;
+            case 2:
+                printf(" (iii) primento de oxigenio: ");
+                break;
+            case 3:
+                printf(" (iv) despolarização atrial: ");
+                break;
+            case 4:
+                printf(" (v) repolarização ventricular: ");
+                break;
+            default:
+                printf("Algum erro ocorreu!");
+        }
+        printf("Media:  %d --- sensor: %d --- quantidade: %d ---valor MAXIMO: %d --- valor MINIMO: %d \n \n", DADOS_SUMARIZADOS[idSensor].media, idSensor, DADOS_SUMARIZADOS[idSensor].quantidadeDados, DADOS_SUMARIZADOS[idSensor].valorMaximo, DADOS_SUMARIZADOS[idSensor].valorMinimo);
     }
     sleep(2);
 }
 
 void sumarizaSensor(int idSensor, int dadoSensor) {
 
-    DADOS[idSensor].soma += dadoSensor;
-    DADOS[idSensor].quantidadeDados += 1;
-    if (DADOS[idSensor].quantidadeDados > 0) {
-        DADOS[idSensor].media = DADOS[idSensor].soma / DADOS[idSensor].quantidadeDados;
+    DADOS_SUMARIZADOS[idSensor].soma += dadoSensor;
+    DADOS_SUMARIZADOS[idSensor].quantidadeDados += 1;
+    if (DADOS_SUMARIZADOS[idSensor].quantidadeDados > 0) {
+        DADOS_SUMARIZADOS[idSensor].media = DADOS_SUMARIZADOS[idSensor].soma / DADOS_SUMARIZADOS[idSensor].quantidadeDados;
     } else {
-        DADOS[idSensor].media = 0;
+        DADOS_SUMARIZADOS[idSensor].media = 0;
     }
     definirMaiorMenor(idSensor, dadoSensor);
 
@@ -266,41 +244,43 @@ void sumarizaSensor(int idSensor, int dadoSensor) {
 
 void definirMaiorMenor(int idSensor, int dadoSensor) {
     if (dadoSensor > 0) {
-        if (DADOS[idSensor].quantidadeDados == 1) {
-            DADOS[idSensor].valorMinimo = dadoSensor;
-            DADOS[idSensor].valorMaximo = dadoSensor;
+        if (DADOS_SUMARIZADOS[idSensor].quantidadeDados == 1) {
+            DADOS_SUMARIZADOS[idSensor].valorMinimo = dadoSensor;
+            DADOS_SUMARIZADOS[idSensor].valorMaximo = dadoSensor;
         } else {
-            if (dadoSensor > DADOS[idSensor].valorMaximo) {
-                DADOS[idSensor].valorMaximo = dadoSensor;
+            if (dadoSensor > DADOS_SUMARIZADOS[idSensor].valorMaximo) {
+                DADOS_SUMARIZADOS[idSensor].valorMaximo = dadoSensor;
             }
-            if (dadoSensor < DADOS[idSensor].valorMinimo) {
-                DADOS[idSensor].valorMinimo = dadoSensor;
+            if (dadoSensor < DADOS_SUMARIZADOS[idSensor].valorMinimo) {
+                DADOS_SUMARIZADOS[idSensor].valorMinimo = dadoSensor;
             }
         }
 
     }
 
 }
-//////MAIN///////////
+
+void iniciarSemaforos() {
+    sem_init(&sessaoCritica, 0, 1);
+    sem_init(&escreverNaFila, 0, 1);
+    sem_init(&lerFila, 0, 1);
+}
 
 main() {
     criarFila(&fila);
-    iniciaSensores(); //inclui os valores de duplas -1 iniciais
+    iniciarSensores();
     void *thread_result;
-    pthread_t thread[N];
-    sem_init(&mutex, 0, 1);
-    sem_init(&mutex2, 0, 1);
-    sem_init(&escreveFila, 0, 1);
-    sem_init(&leFila, 0, 1);
-    geraDadosSensores(-1);
-    for (i = 0; i < N; i++) {
-        sem_init(&semaforoSensor[i], 0, 1);
+    pthread_t thread[NUMEROSENSORES];
+    iniciarSemaforos();
+    gerarDadosSensores(INICIALIZADOR);
+    int idSensor;
+    for (idSensor = 0; idSensor < NUMEROSENSORES; idSensor++) {
+        sem_init(&semaforoSensor[idSensor], 0, 1);
+
+        pthread_create(&thread[idSensor], NULL, sensor, &idSensor);
     }
-    for (i = 0; i < N; i++) {
-        pthread_create(&thread[i], NULL, sensor, &i);
-    }
-    for (i = 0; i < N; i++) {
-        pthread_join(thread[i], &thread_result);
+    for (idSensor = 0; idSensor < NUMEROSENSORES; idSensor++) {
+        pthread_join(thread[idSensor], &thread_result);
     }
 
 }
